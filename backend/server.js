@@ -3,9 +3,15 @@ const cors = require("cors");
 require("dotenv").config();
 
 const app = express();
+const authRoutes = require("./routes/auth");
+app.use("/api/auth", authRoutes);
 
 app.use(cors());
 app.use(express.json());
+app.use("/api/admin",require("./routes/admin"));
+app.use("/api/coach",
+require("./routes/coach"));
+
 
 app.get("/", (req, res) => {
   res.send("Backend Running...");
