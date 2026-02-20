@@ -47,7 +47,17 @@ message:"Fitness Platform API Healthy"
 });
 
 const PORT = process.env.PORT || 5000;
+process.on("uncaughtException",(err)=>{
 
+console.error("Uncaught Exception:",err);
+
+});
+
+process.on("unhandledRejection",(err)=>{
+
+console.error("Unhandled Promise:",err);
+
+});
 app.listen(PORT,()=>{
 
 console.log("Server running on port",PORT);

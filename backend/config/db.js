@@ -4,26 +4,31 @@ const pool = new Pool({
 
 connectionString: process.env.DATABASE_URL,
 
-ssl:{
+ssl: {
 
-rejectUnauthorized:false
+rejectUnauthorized: false
 
-}
+},
+
+max: 10, // max connections
+
+idleTimeoutMillis: 30000,
+
+connectionTimeoutMillis: 20000
+
+});
+
+
+// Error handler (VERY IMPORTANT)
+
+pool.on("error", (err) => {
+
+console.error("Unexpected PG Error:", err);
 
 });
 
-pool.connect()
 
-.then(()=>{
+console.log("PostgreSQL Pool Ready");
 
-console.log("PostgreSQL Connected");
-
-})
-
-.catch((err)=>{
-
-console.log("DB Connection Error",err);
-
-});
 
 module.exports = pool;
