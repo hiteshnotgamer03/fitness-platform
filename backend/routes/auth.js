@@ -6,9 +6,10 @@ const jwt = require("jsonwebtoken");
 
 const pool = require("../config/db");
 
-// ======================================
+
+// ============================
 // REGISTER USER
-// ======================================
+// ============================
 
 router.post("/register", async (req, res) => {
 
@@ -20,22 +21,24 @@ if (!name || !email || !password) {
 
 return res.status(400).json({
 
-message: "Name, Email and Password required"
+message: "Missing fields"
 
 });
 
 }
 
-// check existing email
 
+// check existing user
 
-if ((await pool.query(
+const existingUser = await pool.query(
 
-    "SELECT id FROM users WHERE email=$1",
+"SELECT id FROM users WHERE email=$1",
 
-    [email]
+[email]
 
-)).rows.length > 0) {
+);
+
+if (existingUser.rows.length > 0) {
 
 return res.status(400).json({
 
@@ -45,11 +48,19 @@ message: "User already exists"
 
 }
 
+
 // hash password
 
-const hashedPassword = await bcrypt.hash(password, 10);
+const hashedPassword = await bcrypt.hash(
 
-// insert new user
+password,
+
+10
+
+);
+
+
+// insert user
 
 const result = await pool.query(
 
@@ -67,13 +78,16 @@ role || "client"
 
 );
 
-// generate token
+
+// token
 
 const token = jwt.sign(
 
 {
+
 id: result.rows[0].id,
 role: result.rows[0].role
+
 },
 
 process.env.JWT_SECRET || "secret",
@@ -82,7 +96,8 @@ process.env.JWT_SECRET || "secret",
 
 );
 
-return res.status(201).json({
+
+res.status(201).json({
 
 message: "User Registered",
 
@@ -92,11 +107,13 @@ user: result.rows[0]
 
 });
 
-} catch (error) {
+}
 
-console.error("REGISTER ERROR :", error);
+catch (err) {
 
-return res.status(500).json({
+console.error("REGISTER ERROR:", err);
+
+res.status(500).json({
 
 message: "Server Error"
 
@@ -107,9 +124,9 @@ message: "Server Error"
 });
 
 
-// ======================================
+// ============================
 // LOGIN USER
-// ======================================
+// ============================
 
 router.post("/login", async (req, res) => {
 
@@ -117,15 +134,19 @@ try {
 
 const { email, password, role } = req.body;
 
+
 if (!email || !password) {
 
 return res.status(400).json({
 
-message: "Email and Password required"
+message: "Missing credentials"
 
 });
 
 }
+
+
+// find user
 
 const result = await pool.query(
 
@@ -147,21 +168,23 @@ message: "Invalid credentials"
 
 const dbUser = result.rows[0];
 
-// role validation
+
+// role check
 
 if (role && dbUser.role !== role) {
 
 return res.status(400).json({
 
-message: "Wrong role selected"
+message: "Wrong role"
 
 });
 
 }
 
+
 // password check
 
-const validPassword = await bcrypt.compare(
+const validPass = await bcrypt.compare(
 
 password,
 
@@ -169,7 +192,7 @@ dbUser.password
 
 );
 
-if (!validPassword) {
+if (!validPass) {
 
 return res.status(400).json({
 
@@ -178,6 +201,7 @@ message: "Invalid password"
 });
 
 }
+
 
 // token
 
@@ -196,9 +220,10 @@ process.env.JWT_SECRET || "secret",
 
 );
 
-return res.json({
 
-message: "Login Successful",
+res.json({
+
+message: "Login Success",
 
 token,
 
@@ -213,11 +238,13 @@ role: dbUser.role
 
 });
 
-} catch (error) {
+}
 
-console.error("LOGIN ERROR :", error);
+catch (err) {
 
-return res.status(500).json({
+console.error("LOGIN ERROR:", err);
+
+res.status(500).json({
 
 message: "Server Error"
 
@@ -226,5 +253,6 @@ message: "Server Error"
 }
 
 });
+
 
 module.exports = router;
