@@ -1,9 +1,10 @@
 const express = require("express");
 const cors = require("cors");
-require("dotenv").config();
+
+const authRoutes = require("./routes/auth");
 
 const app = express();
-const authRoutes = require("./routes/auth");
+
 app.use("/api/auth", authRoutes);
 
 app.use(cors());
@@ -11,6 +12,7 @@ app.use(express.json());
 app.use("/api/admin",require("./routes/admin"));
 app.use("/api/coach",
 require("./routes/coach"));
+require("dotenv").config();
 
 
 app.get("/", (req, res) => {
