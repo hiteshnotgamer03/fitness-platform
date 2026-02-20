@@ -1,82 +1,59 @@
+const express = require("express");
+const bcrypt = require("bcryptjs");
 
-import axios from "axios";
+const router = express.Router();
 
-export default function AdminDashboard(){
+const pool = require("../config/db");
 
-const[name,setName]=useState("");
-const[email,setEmail]=useState("");
-const[password,setPassword]=useState("");
+// ADMIN CREATE COACH
 
-const createCoach = async ()=>{
+router.post("/create-coach", async (req, res) => {
 
 try{
 
-await axios.post(
+const { name,email,password } = req.body;
 
-"https://fitness-platform-bapk.onrender.com/api/admin/create-coach",
+if(!name || !email || !password){
 
-{
-name,
-email,
-password
-},
+return res.status(400).json({
 
-{
-headers:{
-Authorization:
-`Bearer ${localStorage.getItem("token")}`
+message:"Missing fields"
+
+});
+
 }
-}
+
+const hash = await bcrypt.hash(password,10);
+
+await pool.query(
+
+`INSERT INTO users
+(name,email,password,role,is_active)
+
+VALUES($1,$2,$3,'coach',true)`,
+
+[name,email,hash]
 
 );
 
-alert("Coach Created");
+res.json({
 
-}catch{
+message:"Coach Created Successfully"
 
-alert("Error");
+});
 
-}
+}catch(error){
 
-};
+console.log(error);
 
-return(
+res.status(500).json({
 
-<div style={{color:"#FFD700",padding:"40px"}}>
+message:"Server Error"
 
-<h1>ADMIN DASHBOARD</h1>
-
-<h3>Create Coach</h3>
-
-<input
-placeholder="Name"
-onChange={(e)=>setName(e.target.value)}
-/>
-
-<br/>
-
-<input
-placeholder="Email"
-onChange={(e)=>setEmail(e.target.value)}
-/>
-
-<br/>
-
-<input
-placeholder="Password"
-onChange={(e)=>setPassword(e.target.value)}
-/>
-
-<br/>
-
-<button onClick={createCoach}>
-
-Create Coach
-
-</button>
-
-</div>
-
-);
+});
 
 }
+
+});
+
+module.exports = router;
