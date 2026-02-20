@@ -4,42 +4,43 @@ const router = express.Router();
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
-const pool = require("../config/db"); // postgres connection
+const pool = require("../config/db");
 
-// ============================
+// ======================================
 // REGISTER USER
-// ============================
+// ======================================
 
-router.post("/register", async (req,res)=>{
+router.post("/register", async (req, res) => {
 
-try{
+try {
 
-const {name,email,password,role} = req.body;
+const { name, email, password, role } = req.body;
 
-if(!name || !email || !password){
+if (!name || !email || !password) {
 
 return res.status(400).json({
 
-message:"Missing fields"
+message: "Name, Email and Password required"
 
 });
 
 }
 
-// check existing user
+// check existing email
 
 const existingUser = await pool.query(
 
-"SELECT * FROM users WHERE email=$1",
+"SELECT id FROM users WHERE email=$1",
+
 [email]
 
 );
 
-if(existingUser.rows.length > 0){
+if (existingUser.rows.length > 0) {
 
 return res.status(400).json({
 
-message:"User already exists"
+message: "User already exists"
 
 });
 
@@ -47,49 +48,58 @@ message:"User already exists"
 
 // hash password
 
-const hashedPassword = await bcrypt.hash(password,10);
+const hashedPassword = await bcrypt.hash(password, 10);
 
+// insert new user
 
-// insert user
+const result = await pool.query(
 
-const newUser = await pool.query(
-
-`
-INSERT INTO users(name,email,password,role)
+`INSERT INTO users
+(name,email,password,role)
 VALUES($1,$2,$3,$4)
-RETURNING id,name,email,role
-`,
-[name,email,hashedPassword,role || "client"]
+RETURNING id,name,email,role`,
+
+[
+name,
+email,
+hashedPassword,
+role || "client"
+]
 
 );
 
-
-// token
+// generate token
 
 const token = jwt.sign(
 
-{ id:newUser.rows[0].id },
+{
+id: result.rows[0].id,
+role: result.rows[0].role
+},
 
 process.env.JWT_SECRET || "secret",
 
-{ expiresIn:"7d" }
+{ expiresIn: "7d" }
 
 );
 
-res.json({
+return res.status(201).json({
+
+message: "User Registered",
 
 token,
-user:newUser.rows[0]
+
+user: result.rows[0]
 
 });
 
-}catch(err){
+} catch (error) {
 
-console.log(err);
+console.error("REGISTER ERROR :", error);
 
-res.status(500).json({
+return res.status(500).json({
 
-message:"Server Error"
+message: "Server Error"
 
 });
 
@@ -98,61 +108,73 @@ message:"Server Error"
 });
 
 
-// ============================
+// ======================================
 // LOGIN USER
-// ============================
+// ======================================
 
-router.post("/login", async(req,res)=>{
+router.post("/login", async (req, res) => {
 
-try{
+try {
 
-const {email,password,role} = req.body;
+const { email, password, role } = req.body;
 
-const user = await pool.query(
+if (!email || !password) {
+
+return res.status(400).json({
+
+message: "Email and Password required"
+
+});
+
+}
+
+const result = await pool.query(
 
 "SELECT * FROM users WHERE email=$1",
+
 [email]
 
 );
 
-if(user.rows.length === 0){
+if (result.rows.length === 0) {
 
 return res.status(400).json({
 
-message:"Invalid credentials"
+message: "Invalid credentials"
 
 });
 
 }
 
-const dbUser = user.rows[0];
+const dbUser = result.rows[0];
 
-// check role
+// role validation
 
-if(role && dbUser.role !== role){
+if (role && dbUser.role !== role) {
 
 return res.status(400).json({
 
-message:"Wrong role"
+message: "Wrong role selected"
 
 });
 
 }
 
-// compare password
+// password check
 
-const validPass = await bcrypt.compare(
+const validPassword = await bcrypt.compare(
 
 password,
+
 dbUser.password
 
 );
 
-if(!validPass){
+if (!validPassword) {
 
 return res.status(400).json({
 
-message:"Invalid password"
+message: "Invalid password"
 
 });
 
@@ -163,37 +185,42 @@ message:"Invalid password"
 const token = jwt.sign(
 
 {
-id:dbUser.id,
-role:dbUser.role
+
+id: dbUser.id,
+role: dbUser.role
+
 },
 
 process.env.JWT_SECRET || "secret",
 
-{ expiresIn:"7d" }
+{ expiresIn: "7d" }
 
 );
 
-res.json({
+return res.json({
+
+message: "Login Successful",
 
 token,
-user:{
 
-id:dbUser.id,
-name:dbUser.name,
-email:dbUser.email,
-role:dbUser.role
+user: {
+
+id: dbUser.id,
+name: dbUser.name,
+email: dbUser.email,
+role: dbUser.role
 
 }
 
 });
 
-}catch(err){
+} catch (error) {
 
-console.log(err);
+console.error("LOGIN ERROR :", error);
 
-res.status(500).json({
+return res.status(500).json({
 
-message:"Server Error"
+message: "Server Error"
 
 });
 
