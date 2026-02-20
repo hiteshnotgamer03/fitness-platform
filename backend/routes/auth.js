@@ -28,15 +28,14 @@ message: "Name, Email and Password required"
 
 // check existing email
 
-const existingUser = await pool.query(
 
-"SELECT id FROM users WHERE email=$1",
+if ((await pool.query(
 
-[email]
+    "SELECT id FROM users WHERE email=$1",
 
-);
+    [email]
 
-if (existingUser.rows.length > 0) {
+)).rows.length > 0) {
 
 return res.status(400).json({
 
